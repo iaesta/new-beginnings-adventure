@@ -146,15 +146,27 @@ export function useGameState() {
     setState(prev => {
       if (prev.phase !== 'playing') return prev;
       const newDay = prev.day + 1;
-      return {
+      const newLogs: LogEntry[] = [...prev.log, { id: ++logId, text: `— Day ${newDay} —`, type: 'narrative' as const, day: newDay }];
+
+      let newState = {
         ...prev,
         day: newDay,
         timeOfDay: 'morning' as const,
         actionsToday: 0,
         energy: clamp(prev.energy + 25, 0, 100),
         happiness: clamp(prev.happiness - 3, 0, 100),
-        log: [...prev.log, { id: ++logId, text: `— Day ${newDay} —`, type: 'narrative' as const, day: newDay }],
       };
+
+      // Check milestones
+      const newMilestones = [...prev.milestones];
+      for (const m of MILESTONES) {
+        if (!newMilestones.includes(m.id) && m.condition(newState)) {
+          newMilestones.push(m.id);
+          newLogs.push({ id: ++logId, text: `Milestone unlocked: ${m.label}`, type: 'milestone' as const, day: newDay });
+        }
+      }
+
+      return { ...newState, log: newLogs, milestones: newMilestones };
     });
   }, []);
 
