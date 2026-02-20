@@ -15,18 +15,16 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
   const unlockedCount = state.milestones.length;
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen">
-      {/* Sidebar */}
-      <aside className="w-full lg:w-72 border-b lg:border-b-0 lg:border-r border-border p-4 lg:p-6 space-y-6 bg-card/50">
+    <div className="min-h-screen lg:h-screen flex flex-col lg:flex-row">
+      {/* LEFT (1/4) — Sidebar */}
+      <aside className="w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-border p-4 lg:p-6 space-y-6 bg-white/5 backdrop-blur">
         {/* Header */}
         <div className="space-y-1">
           <h2 className="font-serif text-lg text-primary text-glow-primary">Fresh Start</h2>
           <p className="text-xs text-muted-foreground">
             Day {state.day} · {TIME_LABELS[state.timeOfDay]}
           </p>
-          <p className="text-xs text-muted-foreground">
-            {state.jobTitle}
-          </p>
+          <p className="text-xs text-muted-foreground">{state.jobTitle}</p>
         </div>
 
         {/* Stats */}
@@ -48,13 +46,11 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
             Milestones {unlockedCount}/{MILESTONES.length}
           </p>
           <div className="flex flex-wrap gap-1">
-            {MILESTONES.map(m => (
+            {MILESTONES.map((m) => (
               <span
                 key={m.id}
                 className={`text-xs px-1.5 py-0.5 rounded ${
-                  state.milestones.includes(m.id)
-                    ? 'text-primary'
-                    : 'text-muted-foreground/30'
+                  state.milestones.includes(m.id) ? 'text-primary' : 'text-muted-foreground/30'
                 }`}
                 title={m.label}
               >
@@ -70,9 +66,7 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
             <div
               key={i}
               className={`w-3 h-3 rounded-full border ${
-                i < state.actionsToday
-                  ? 'bg-primary/60 border-primary/40'
-                  : 'bg-secondary border-border'
+                i < state.actionsToday ? 'bg-primary/60 border-primary/40' : 'bg-secondary border-border'
               }`}
             />
           ))}
@@ -82,17 +76,30 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 flex flex-col p-4 lg:p-6 gap-4 min-h-0">
-        {/* Log */}
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-          <GameLog entries={state.log} />
-        </div>
+      {/* RIGHT (3/4) — Story (top) + Actions (bottom) */}
+      <div className="flex-1 min-h-0 lg:h-screen flex flex-col">
+        {/* CENTER (2/4) — Story/Log */}
+        <main className="flex-1 min-h-0 p-4 lg:p-6">
+          <div className="h-full rounded-2xl border border-white/10 bg-white/5 backdrop-blur overflow-hidden">
+            <GameLog entries={state.log} />
+          </div>
+        </main>
 
-        {/* Actions */}
-        <div className="space-y-2">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-            {availableActions.map(action => (
+        {/* BOTTOM RIGHT (1/4) — Actions */}
+        <section className="border-t border-border p-4 lg:p-6 bg-white/5 backdrop-blur">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Actions</p>
+
+            <button
+              onClick={onSkipDay}
+              className="text-xs px-4 py-2 rounded-xl border border-border bg-white/5 hover:bg-white/10 transition-all duration-200"
+            >
+              Skip to next day →
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {availableActions.map((action) => (
               <ActionButton
                 key={action.id}
                 action={action}
@@ -102,16 +109,8 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
               />
             ))}
           </div>
-          <div className="flex justify-end">
-            <button
-              onClick={onSkipDay}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1"
-            >
-              Skip to next day →
-            </button>
-          </div>
-        </div>
-      </main>
+        </section>
+      </div>
     </div>
   );
 };
