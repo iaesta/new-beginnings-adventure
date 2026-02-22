@@ -2,6 +2,8 @@
 
 A lightweight life-simulation web game built with React, TypeScript and Tailwind CSS.
 
+![Game Screenshot](./screenshot.png)
+
 This project focuses on:
 - State management and UI feedback
 - Component-based architecture
@@ -30,7 +32,7 @@ This project focuses on:
 Clone the repository:
 
 ```bash
-git clone <your-repo-url>
+git clone <https://github.com/iaesta/new-beginnings-adventure.git>
 cd new-beginnings-adventure
 npm install
 npm run dev
