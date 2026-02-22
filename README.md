@@ -1,10 +1,10 @@
 # New Beginnings Adventure
 
-A narrative life-simulation web game built with **React, TypeScript and Tailwind CSS**.
+A small narrative life-simulation web game built with **React, TypeScript and Tailwind CSS**.
 
 ![Game Screenshot](./screenshot.png)
 
-The player progresses through daily actions, managing limited resources (energy, money, happiness and skills) while unlocking milestones and building reputation over time.
+This project was created to practice component-based architecture, state-driven UI updates and interactive layout design.
 
 ---
 
@@ -14,36 +14,33 @@ The player progresses through daily actions, managing limited resources (energy,
 - TypeScript
 - Vite
 - Tailwind CSS
-- shadcn-ui
+
+---
+
+## What this project demonstrates
+
+- Component-based structure
+- Centralized state management
+- UI updates derived from state changes
+- Responsive split-screen layout
+- Clean and iterative UI refinement
 
 ---
 
 ## Features
 
-- Action-based daily progression system
-- Limited actions per day
+- Limited daily action system
 - Resource management (energy, money, happiness, skills)
 - Reputation and milestone tracking
-- Dynamic event log driven by state changes
-- Responsive split-screen layout (sidebar + story + actions)
-
----
-
-## Architecture
-
-- Component-based structure
-- Centralized game state
-- Derived UI updates based on player actions
-- Modular action system
+- Dynamic event log
 
 ---
 
 ## Planned Improvements
 
-- Save/load system using localStorage
-- Visual event feedback (images or animations)
-- Improved mobile landscape experience
-- Enhanced action tooltips and accessibility
+- Save / Load system using localStorage
+- Improved visual feedback for actions
+- Better mobile landscape experience
 - Expanded milestone system
 
 ---
