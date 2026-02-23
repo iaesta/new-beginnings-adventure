@@ -11,12 +11,12 @@ import {
 
 /**
  * useGameState.ts (Energy-based loop)
- * - Removes the hard limit of maxActions for gameplay (energy is the limiter)
+ * - Gameplay is limited by energy (NOT by maxActions)
  * - Auto-advances to the next day when energy reaches 0
+ * - Provides onStart/onRestart for IntroScreen/EndingScreen
  *
- * Compatible with your current types.ts:
- *   - GameState.timeOfDay is a string union
- *   - GameState.log is LogEntry[]
+ * Extra safety:
+ * - Exports BOTH default and named `useGameState` so imports won't break.
  */
 
 const TIME_ORDER: GameState["timeOfDay"][] = ["morning", "afternoon", "evening", "night"];
@@ -48,7 +48,7 @@ function startNextDay(state: GameState): GameState {
     timeOfDay: "morning",
     actionsToday: 0,
     energy: 100,
-    // keep maxActions for compatibility; gameplay no longer uses it
+    // keep maxActions for compatibility (UI shouldn't rely on it anymore)
     maxActions: state.maxActions,
   };
 
@@ -146,7 +146,7 @@ function applyAction(state: GameState, action: GameAction): GameState {
   return next;
 }
 
-const STARTING_STATE: GameState = {
+export const STARTING_STATE: GameState = {
   day: 1,
   timeOfDay: "morning",
   money: 0,
@@ -155,17 +155,17 @@ const STARTING_STATE: GameState = {
   skills: 0,
   reputation: 0,
   actionsToday: 0,
-  maxActions: 999, // kept for compatibility; UI no longer depends on it
+  maxActions: 999, // kept for compatibility; gameplay does not use it
   milestones: [],
   jobTitle: "Junior Developer",
-  phase: "playing",
+  phase: "intro",
   log: [
     { id: 1, text: "A fresh start begins.", type: "narrative", day: 1 },
     { id: 2, text: `Day 1 · ${TIME_LABELS.morning}`, type: "narrative", day: 1 },
   ],
 };
 
-export default function useGameState() {
+function _useGameState() {
   const [state, setState] = useState<GameState>(STARTING_STATE);
 
   const availableActions = useMemo(() => {
@@ -186,5 +186,17 @@ export default function useGameState() {
     setState((prev) => startNextDay(prev));
   };
 
-  return { state, availableActions, onAction, onSkipDay };
+  const onStart = () => {
+    setState((prev) => ({ ...prev, phase: "playing" }));
+  };
+
+  const onRestart = () => {
+    setState(STARTING_STATE);
+  };
+
+  return { state, availableActions, onAction, onSkipDay, onStart, onRestart };
 }
+
+// Export BOTH styles so your imports won't break
+export const useGameState = _useGameState;
+export default _useGameState;
