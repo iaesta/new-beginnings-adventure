@@ -1,8 +1,8 @@
-import { GameState, GameAction } from '@/game/types';
-import { TIME_LABELS, MILESTONES } from '@/game/data';
-import StatBar from './StatBar';
-import GameLog from './GameLog';
-import ActionButton from './ActionButton';
+import { GameState, GameAction } from "@/game/types";
+import { TIME_LABELS, MILESTONES } from "@/game/data";
+import StatBar from "./StatBar";
+import GameLog from "./GameLog";
+import ActionButton from "./ActionButton";
 
 interface GameScreenProps {
   state: GameState;
@@ -50,29 +50,19 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
               <span
                 key={m.id}
                 className={`text-xs px-1.5 py-0.5 rounded ${
-                  state.milestones.includes(m.id) ? 'text-primary' : 'text-muted-foreground/30'
+                  state.milestones.includes(m.id) ? "text-primary" : "text-muted-foreground/30"
                 }`}
                 title={m.label}
               >
-                {m.label.split(' ')[0]}
+                {m.label.split(" ")[0]}
               </span>
             ))}
           </div>
         </div>
 
-        {/* Actions remaining */}
-        <div className="flex items-center gap-1">
-          {Array.from({ length: state.maxActions }).map((_, i) => (
-            <div
-              key={i}
-              className={`w-3 h-3 rounded-full border ${
-                i < state.actionsToday ? 'bg-primary/60 border-primary/40' : 'bg-secondary border-border'
-              }`}
-            />
-          ))}
-          <span className="text-xs text-muted-foreground ml-2">
-            {state.maxActions - state.actionsToday} actions left
-          </span>
+        {/* Info */}
+        <div className="text-xs text-muted-foreground">
+          Actions are limited by <span className="text-foreground">Energy</span>.
         </div>
       </aside>
 
@@ -103,7 +93,7 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
               <ActionButton
                 key={action.id}
                 action={action}
-                disabled={state.actionsToday >= state.maxActions}
+                disabled={false}
                 lowEnergy={state.energy < action.energyCost}
                 onClick={() => onAction(action.id)}
               />
