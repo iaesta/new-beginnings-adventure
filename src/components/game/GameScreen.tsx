@@ -1,8 +1,15 @@
+import { useState } from "react";
 import { GameState, GameAction } from "@/game/types";
 import { TIME_LABELS, MILESTONES } from "@/game/data";
 import StatBar from "./StatBar";
 import GameLog from "./GameLog";
 import ActionButton from "./ActionButton";
+
+interface TooltipData {
+  text: string;
+  x: number;
+  y: number;
+}
 
 interface GameScreenProps {
   state: GameState;
@@ -13,6 +20,19 @@ interface GameScreenProps {
 
 const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreenProps) => {
   const unlockedCount = state.milestones.length;
+
+  const [tooltip, setTooltip] = useState<TooltipData | null>(null);
+
+  const showTooltip = (text: string, rect: DOMRect) => {
+    const x = rect.left + rect.width / 2;
+    const y = rect.top - 10;
+
+    setTooltip({ text, x, y });
+
+    window.setTimeout(() => {
+      setTooltip(null);
+    }, 3000);
+  };
 
   return (
     <div className="min-h-screen lg:h-screen flex flex-col lg:flex-row">
@@ -96,10 +116,27 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
                 disabled={false}
                 lowEnergy={state.energy < action.energyCost}
                 onClick={() => onAction(action.id)}
+                onHover={(text, rect) => showTooltip(text, rect)}
               />
             ))}
           </div>
         </section>
+
+      {tooltip && (
+  <div
+    className="fixed z-50 pointer-events-none"
+    style={{
+      left: tooltip.x,
+      top: tooltip.y,
+      transform: "translate(-50%, -100%)",
+    }}
+  >
+    <div className="rounded-xl border border-white/10 bg-black/80 backdrop-blur-md px-4 py-2 text-xs text-white shadow-lg">
+      {tooltip.text}
+    </div>
+  </div>
+)}
+
       </div>
     </div>
   );

@@ -1,18 +1,22 @@
-import { GameAction } from '@/game/types';
+import type { GameAction } from "@/game/types";
 
 interface ActionButtonProps {
   action: GameAction;
   disabled: boolean;
   lowEnergy: boolean;
   onClick: () => void;
+  onHover: (text: string, rect: DOMRect) => void;
 }
 
-const ActionButton = ({ action, disabled, lowEnergy, onClick }: ActionButtonProps) => {
+const ActionButton = ({ action, disabled, lowEnergy, onClick, onHover }: ActionButtonProps) => {
   const isDisabled = disabled || (lowEnergy && action.energyCost > 0);
 
   return (
     <button
       onClick={onClick}
+      onMouseEnter={(e) =>
+      onHover(action.description, e.currentTarget.getBoundingClientRect())
+  }
       disabled={isDisabled}
       className={`group relative w-full text-left rounded-2xl border p-4
                   transition-all duration-200 backdrop-blur-sm
@@ -43,19 +47,6 @@ const ActionButton = ({ action, disabled, lowEnergy, onClick }: ActionButtonProp
       ⚡ {action.energyCost}
     </span>
   )}
-</div>
-           <div className="pointer-events-none absolute left-4 right-4 top-full mt-2 z-20
-                  hidden lg:block
-                  translate-y-1 opacity-0
-                  group-hover:translate-y-0 group-hover:opacity-100
-                  transition-all duration-200"
->
-      <div className="rounded-xl border border-white/10
-                  bg-black/60 backdrop-blur-md
-                  px-3 py-2 text-xs text-white
-                  shadow-[0_8px_25px_rgba(0,0,0,0.4)]">
-        {action.description}
-      </div>
 </div>
     </button>
   );
