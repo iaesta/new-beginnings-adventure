@@ -70,6 +70,30 @@ export const ACTIONS: GameAction[] = [
     effects: { happiness: 15, skills: 1 },
     minDay: 2,
   },
+  {
+  id: "socialize_coffee",
+  label: "Coffee",
+  description: "Quick chat. Cheap and relaxing.",
+  icon: "☕",
+  energyCost: 8,
+  effects: { money: -5, happiness: +6, reputation: +1 },
+},
+{
+  id: "socialize_dinner",
+  label: "Dinner",
+  description: "A proper dinner out. More expensive, bigger mood boost.",
+  icon: "🍽️",
+  energyCost: 15,
+  effects: { money: -18, happiness: +12, reputation: +2 },
+},
+{
+  id: "socialize_party",
+  label: "Party",
+  description: "Big night. Costs energy, boosts reputation.",
+  icon: "🎉",
+  energyCost: 25,
+  effects: { money: -35, happiness: +18, reputation: +5 },
+},
 ];
 
 export const EVENTS: GameEvent[] = [
@@ -222,4 +246,7 @@ export const ACTION_NARRATIVES: Record<string, string[]> = {
   'side-hustle': ['You take on freelance work. It\'s exhausting but the extra cash helps.', 'A side project keeps you busy. Your skills are paying off.'],
   network: ['You attend a mixer. Business cards exchanged, connections made.', 'An industry meetup. You\'re building your network.'],
   explore: EXPLORE_NARRATIVES,
+  socialize_coffee: SOCIAL_NARRATIVES,
+  socialize_dinner: SOCIAL_NARRATIVES,
+  socialize_party: SOCIAL_NARRATIVES,
 };

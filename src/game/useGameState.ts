@@ -15,6 +15,10 @@ import {
  * - Auto-advances to the next day when energy reaches 0
  * - Provides onStart/onRestart for IntroScreen/EndingScreen
  *
+ * Option B (Debt rule):
+ * - Actions can be taken even if they would put Money below 0
+ * - If Money would go below 0, it is reset to 0 and a penalty is applied
+ *
  * Extra safety:
  * - Exports BOTH default and named `useGameState` so imports won't break.
  */
@@ -64,7 +68,10 @@ function pickNarrative(actionId: string): string | null {
 
   if (actionId === "work") return pick(WORK_NARRATIVES);
   if (actionId === "study") return pick(STUDY_NARRATIVES);
-  if (actionId === "socialize") return pick(SOCIAL_NARRATIVES);
+
+  // Treat all socialize variants the same (socialize, socialize_coffee, etc.)
+  if (actionId === "socialize" || actionId.startsWith("socialize_")) return pick(SOCIAL_NARRATIVES);
+
   return null;
 }
 
@@ -104,10 +111,16 @@ function applyAction(state: GameState, action: GameAction): GameState {
 
   // 2) Apply effects
   const eff = action.effects ?? {};
-  const money = Math.max(0, state.money + (eff.money ?? 0));
-  const happiness = clamp(state.happiness + (eff.happiness ?? 0), 0, 100);
+
+  // Money (Option B Debt rule)
+  const moneyRaw = state.money + (eff.money ?? 0);
+  const wentBroke = moneyRaw < 0;
+  const money = wentBroke ? 0 : moneyRaw;
+
+  // Other stats
+  let happiness = clamp(state.happiness + (eff.happiness ?? 0), 0, 100);
   const skills = clamp(state.skills + (eff.skills ?? 0), 0, 100);
-  const reputation = Math.max(0, state.reputation + (eff.reputation ?? 0));
+  let reputation = Math.max(0, state.reputation + (eff.reputation ?? 0));
   const energy = clamp(energyAfterCost + (eff.energy ?? 0), 0, 100);
 
   let next: GameState = {
@@ -128,6 +141,20 @@ function applyAction(state: GameState, action: GameAction): GameState {
     day: next.day,
   });
 
+  // Debt penalty + message
+  if (wentBroke) {
+    happiness = clamp(next.happiness - 8, 0, 100);
+    reputation = Math.max(0, next.reputation - 2);
+
+    next = { ...next, happiness, reputation, money: 0 };
+
+    next = addLog(next, {
+      text: "You couldn't really afford it… Money reset to 0. Mood and reputation dropped.",
+      type: "event",
+      day: next.day,
+    });
+  }
+
   // Optional narrative
   const narrative = pickNarrative(action.id);
   if (narrative) {
@@ -137,7 +164,7 @@ function applyAction(state: GameState, action: GameAction): GameState {
   // Milestones
   next = applyMilestones(next);
 
-  // ✅ If energy hits 0, auto-sleep to next day
+  // If energy hits 0, auto-sleep to next day
   if (next.energy <= 0) {
     next = addLog(next, { text: "You're exhausted.", type: "event", day: next.day });
     return startNextDay(next);

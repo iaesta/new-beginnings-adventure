@@ -4,12 +4,20 @@ import { TIME_LABELS, MILESTONES } from "@/game/data";
 import StatBar from "./StatBar";
 import GameLog from "./GameLog";
 import ActionButton from "./ActionButton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface TooltipData {
   text: string;
   x: number;
   y: number;
 }
+
+const HIDDEN_ACTION_IDS = new Set([
+  "socialize_coffee",
+  "socialize_dinner",
+  "socialize_party",
+]);
 
 interface GameScreenProps {
   state: GameState;
@@ -20,9 +28,10 @@ interface GameScreenProps {
 
 const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreenProps) => {
   const unlockedCount = state.milestones.length;
-
+  const [socialOpen, setSocialOpen] = useState(false);
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
-
+  const gridActions = availableActions.filter((a) => !HIDDEN_ACTION_IDS.has(a.id));
+  
   const showTooltip = (text: string, rect: DOMRect) => {
     const x = rect.left + rect.width / 2;
     const y = rect.top - 10;
@@ -99,7 +108,41 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
         <section className="border-t border-border p-4 lg:p-6 bg-white/5 backdrop-blur">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Actions</p>
+              <Dialog open={socialOpen} onOpenChange={setSocialOpen}>
+  <DialogContent className="sm:max-w-md">
+    <DialogHeader>
+      <DialogTitle>Choose how to socialize</DialogTitle>
+    </DialogHeader>
 
+    <div className="space-y-2">
+      <Button
+        className="w-full justify-between"
+        onClick={() => { onAction("socialize_coffee"); setSocialOpen(false); }}
+      >
+        <span>☕ Coffee</span>
+        <span className="text-xs opacity-80">⚡ 8 · 💰 5</span>
+      </Button>
+
+      <Button
+        className="w-full justify-between"
+        onClick={() => { onAction("socialize_dinner"); setSocialOpen(false); }}
+        variant="secondary"
+      >
+        <span>🍽️ Dinner</span>
+        <span className="text-xs opacity-80">⚡ 15 · 💰 18</span>
+      </Button>
+
+      <Button
+        className="w-full justify-between"
+        onClick={() => { onAction("socialize_party"); setSocialOpen(false); }}
+        variant="outline"
+      >
+        <span>🎉 Party</span>
+        <span className="text-xs opacity-80">⚡ 25 · 💰 35</span>
+      </Button>
+    </div>
+  </DialogContent>
+</Dialog>
             <button
               onClick={onSkipDay}
               className="text-xs px-4 py-2 rounded-xl border border-border bg-white/5 hover:bg-white/10 transition-all duration-200"
@@ -109,14 +152,20 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {availableActions.map((action) => (
+            {gridActions.map((action) => (
               <ActionButton
                 key={action.id}
                 action={action}
                 disabled={false}
                 lowEnergy={state.energy < action.energyCost}
-                onClick={() => onAction(action.id)}
                 onHover={(text, rect) => showTooltip(text, rect)}
+                onClick={() => {
+                  if (action.id === "socialize") {
+                     setSocialOpen(true);
+                  } else {
+                      onAction(action.id);
+             }    
+        }}
               />
             ))}
           </div>
