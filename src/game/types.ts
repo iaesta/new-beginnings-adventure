@@ -12,13 +12,10 @@ export interface GameState {
   milestones: string[];
   jobTitle: string;
   phase: 'intro' | 'playing' | 'ending';
-}
 
-export interface LogEntry {
-  id: number;
-  text: string;
-  type: 'narrative' | 'action' | 'event' | 'milestone';
-  day: number;
+  // NEW: time slots (hours)
+  slotsPerDay: number;      // e.g. 24
+  slotsRemaining: number;   // 0..slotsPerDay
 }
 
 export interface GameAction {
@@ -27,9 +24,23 @@ export interface GameAction {
   icon: string;
   description: string;
   energyCost: number;
+
+  // NEW: how many hours (slots) this action consumes
+  // If omitted, the game assumes 1.
+  slotCost?: number;
+
   effects: Partial<Pick<GameState, 'money' | 'energy' | 'happiness' | 'skills' | 'reputation'>>;
   minSkills?: number;
+  lockedText?: string;
+  showWhenLocked?: boolean;
   minDay?: number;
+}
+
+export interface LogEntry {
+  id: number;
+  text: string;
+  type: 'narrative' | 'action' | 'event' | 'milestone';
+  day: number;
 }
 
 export interface GameEvent {
