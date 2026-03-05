@@ -157,6 +157,8 @@ function startNextDay(state: GameState): GameState {
     slotsRemaining: slotsPerDay,
     dailyEventTriggeredToday: false,
     actionEventTriggeredToday: false,
+    needsRecharge: false,
+    crashPenaltyApplied: 0,
   };
 
   let s = addLog(base, { text: "You went to sleep. A new day begins.", type: "narrative", day: base.day });
@@ -190,7 +192,9 @@ function applyMilestones(state: GameState): GameState {
 }
 
 function applyAction(state: GameState, action: GameAction): GameState {
-  if (state.energy <= 0) return startNextDay(state);
+  if (state.needsRecharge) {
+    return addLog(state, { text: "You need to recharge before doing anything else.", type: "event", day: state.day });
+  }
 
   const slotsPerDay = state.slotsPerDay ?? DEFAULT_SLOTS_PER_DAY;
   const slotCost = action.slotCost ?? 1;
@@ -260,7 +264,21 @@ function applyAction(state: GameState, action: GameAction): GameState {
 
   if (isBigActionId(action.id)) next = tryTriggerEvent(next, "action", action.id);
 
-  if (next.energy <= 0) return startNextDay(addLog(next, { text: "You're exhausted.", type: "event", day: next.day }));
+  if (next.energy <= 0) {
+    // Crash: apply penalty now and force a recharge before next day
+    const penalty = 8;
+    const happinessCrash = clamp(next.happiness - penalty, 0, 100);
+    const fatigueDebt = (next.fatigueDebt ?? 0) + 3;
+    let crashed: GameState = {
+      ...next,
+      happiness: happinessCrash,
+      needsRecharge: true,
+      crashPenaltyApplied: penalty,
+      fatigueDebt,
+    };
+    crashed = addLog(crashed, { text: "You crashed from exhaustion (-8 Happiness). Recharge to recover.", type: "event", day: crashed.day });
+    return crashed;
+  }
   if (next.slotsRemaining <= 0) return startNextDay(addLog(next, { text: "No time left today.", type: "event", day: next.day }));
 
   return next;
@@ -284,6 +302,9 @@ export const STARTING_STATE: GameState = {
   dailyEventTriggeredToday: false,
   actionEventTriggeredToday: false,
   eventLastDay: {},
+  fatigueDebt: 0,
+  needsRecharge: false,
+  crashPenaltyApplied: 0,
   log: [
     { id: 1, text: "A fresh start begins.", type: "narrative", day: 1 },
     { id: 2, text: `Day 1 · ${TIME_LABELS.morning}`, type: "narrative", day: 1 },
@@ -304,13 +325,30 @@ function _useGameState() {
     });
   }, [state.day, state.skills]);
 
+function rechargeAndNextDay(state: GameState): GameState {
+  let s = state;
+
+  // Refund crash penalty if it was applied
+  if (s.crashPenaltyApplied && s.crashPenaltyApplied > 0) {
+    s = { ...s, happiness: clamp(s.happiness + s.crashPenaltyApplied, 0, 100), crashPenaltyApplied: 0 };
+    s = addLog(s, { text: "Recharge cancelled your crash penalty.", type: "event", day: s.day });
+  }
+
+  // Reduce fatigue debt slowly (anti-abuse)
+  if ((s.fatigueDebt ?? 0) > 0) {
+    s = { ...s, fatigueDebt: Math.max(0, s.fatigueDebt - 1) };
+  }
+
+  return startNextDay(s);
+}
+
   const onAction = (id: string) => {
     const action = availableActions.find((a) => a.id === id);
     if (!action) return;
     setState((prev) => applyAction(prev, action));
   };
 
-  const onSkipDay = () => setState((prev) => startNextDay(prev));
+  const onSkipDay = () => setState((prev) => rechargeAndNextDay(prev));
 
   const onStart = () =>
     setState((prev) => {

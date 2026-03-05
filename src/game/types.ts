@@ -24,6 +24,11 @@ export interface GameState {
   dailyEventTriggeredToday: boolean; // max 1/day
   actionEventTriggeredToday: boolean; // max 1/day
   eventLastDay: Record<string, number>; // eventId -> last day triggered
+
+  // Fatigue system (anti-abuse for crashing to 0 energy)
+  fatigueDebt: number; // stacks; crash adds +3, recharge clears -1 per day
+  needsRecharge: boolean; // when true, actions are blocked until you recharge
+  crashPenaltyApplied: number; // happiness penalty applied on crash (refunded on recharge)
 }
 
 export interface GameAction {

@@ -98,7 +98,7 @@ export const ACTIONS: GameAction[] = [
     icon: "🎉",
     description: "Big night. Costs energy, boosts reputation.",
     energyCost: 25,
-    slotCost: 4,
+    slotCost: 3,
     effects: { money: -35, happiness: 18, reputation: 5 },
   },
 
@@ -151,6 +151,45 @@ export const ACTIONS: GameAction[] = [
     slotCost: 2,
     effects: { happiness: 15, skills: 1 },
     minDay: 2,
+  },
+
+
+  // Rest menu + options
+  {
+    id: "rest",
+    label: "Rest",
+    icon: "🛋️",
+    description: "Choose how long you want to rest.",
+    energyCost: 0,
+    slotCost: 0,
+    effects: {},
+  },
+  {
+    id: "nap_1h",
+    label: "Nap (1h)",
+    icon: "😴",
+    description: "A quick nap to regain a bit of energy.",
+    energyCost: 0,
+    slotCost: 1,
+    effects: { energy: 15, happiness: 1 },
+  },
+  {
+    id: "rest_4h",
+    label: "Rest (4h)",
+    icon: "🛌",
+    description: "A solid rest session.",
+    energyCost: 0,
+    slotCost: 4,
+    effects: { energy: 50, happiness: 4 },
+  },
+  {
+    id: "sleep_8h",
+    label: "Sleep (8h)",
+    icon: "🌙",
+    description: "Deep sleep. Fully recover energy.",
+    energyCost: 0,
+    slotCost: 8,
+    effects: { energy: 100, happiness: 6 },
   },
 ];
 
