@@ -1,7 +1,5 @@
-export const TEXT = {
-  GAME: {
-    title: "Fresh Start",
-  },
+export const TEXT_EN = {
+  GAME: { title: "Fresh Start" },
 
   UI: {
     day: "Day",
@@ -15,6 +13,7 @@ export const TEXT = {
     timeAriaLabel: "Time",
     yourJourney: "Your Journey",
     milestones: "Milestones",
+    language: "Language",
   },
 
   STATS: {
@@ -53,4 +52,4 @@ export const TEXT = {
   },
 } as const;
 
-export type TextSchema = typeof TEXT;
+export type TextSchema = typeof TEXT_EN;

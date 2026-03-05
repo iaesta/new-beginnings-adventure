@@ -1,3 +1,4 @@
+import { useText } from "@/game/i18n";
 import { GameState } from '@/game/types';
 import { MILESTONES } from '@/game/data';
 
@@ -7,6 +8,7 @@ interface EndingScreenProps {
 }
 
 const EndingScreen = ({ state, onRestart }: EndingScreenProps) => {
+  const T = useText();
   return (
     <div className="flex items-center justify-center min-h-screen p-6">
       <div className="max-w-md w-full text-center space-y-8 animate-fade-in">

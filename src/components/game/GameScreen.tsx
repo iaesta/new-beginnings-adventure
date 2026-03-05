@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { GameAction, GameState } from "@/game/types";
 import { TIME_LABELS, MILESTONES } from "@/game/data";
-import { TEXT } from "@/game/text";
+import { useI18n, useText } from "@/game/i18n";
 import StatBar from "./StatBar";
 import GameLog from "./GameLog";
 import ActionButton from "./ActionButton";
@@ -234,6 +234,8 @@ function repColor(rep: number) {
 
 /* -------------------- SCREEN -------------------- */
 const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreenProps) => {
+  const { lang, setLang } = useI18n();
+  const T = useText();
   const DAYS_IN_MONTH = 30;
   const dayInMonth = ((state.day - 1) % DAYS_IN_MONTH) + 1;
   const monthNumber = Math.floor((state.day - 1) / DAYS_IN_MONTH) + 1;
@@ -394,7 +396,7 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
               className={`text-xs px-4 py-2 rounded-xl border transition-all duration-200 ${state.energy <= 0 ? "border-red-500 bg-red-500/10 hover:bg-red-500/20" : "border-border bg-white/5 hover:bg-white/10"}`}
               type="button"
             >
-              {TEXT.recharge}
+              Skip Day
             </button>
           </div>
 
