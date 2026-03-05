@@ -1,21 +1,29 @@
 export interface GameState {
   day: number;
-  timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night';
+  timeOfDay: "morning" | "afternoon" | "evening" | "night";
+
   money: number;
   energy: number;
   happiness: number;
   skills: number;
   reputation: number;
+
   actionsToday: number;
   maxActions: number;
+
   log: LogEntry[];
   milestones: string[];
   jobTitle: string;
-  phase: 'intro' | 'playing' | 'ending';
+  phase: "intro" | "playing" | "ending";
 
-  // NEW: time slots (hours)
-  slotsPerDay: number;      // e.g. 24
-  slotsRemaining: number;   // 0..slotsPerDay
+  // Time slots (hours)
+  slotsPerDay: number; // e.g. 24
+  slotsRemaining: number; // 0..slotsPerDay
+
+  // Events (limits + cooldown)
+  dailyEventTriggeredToday: boolean; // max 1/day
+  actionEventTriggeredToday: boolean; // max 1/day
+  eventLastDay: Record<string, number>; // eventId -> last day triggered
 }
 
 export interface GameAction {
@@ -25,11 +33,10 @@ export interface GameAction {
   description: string;
   energyCost: number;
 
-  // NEW: how many hours (slots) this action consumes
-  // If omitted, the game assumes 1.
+  // how many hours (slots) this action consumes
   slotCost?: number;
 
-  effects: Partial<Pick<GameState, 'money' | 'energy' | 'happiness' | 'skills' | 'reputation'>>;
+  effects: Partial<Pick<GameState, "money" | "energy" | "happiness" | "skills" | "reputation">>;
   minSkills?: number;
   lockedText?: string;
   showWhenLocked?: boolean;
@@ -39,15 +46,29 @@ export interface GameAction {
 export interface LogEntry {
   id: number;
   text: string;
-  type: 'narrative' | 'action' | 'event' | 'milestone';
+  type: "narrative" | "action" | "event" | "milestone";
   day: number;
 }
 
+export type EventKind = "daily" | "action";
+
 export interface GameEvent {
   id: string;
+
+  // daily = evaluated at start of the day
+  // action = evaluated after a big action
+  kind: EventKind;
+
   text: string;
+  chance: number; // 0..1
+
   minDay: number;
   maxDay?: number;
+
   condition?: (state: GameState) => boolean;
-  effects: Partial<Pick<GameState, 'money' | 'energy' | 'happiness' | 'skills' | 'reputation'>>;
+
+  // only for kind="action"
+  trigger?: (actionId: string, state: GameState) => boolean;
+
+  effects: Partial<Pick<GameState, "money" | "energy" | "happiness" | "skills" | "reputation">>;
 }
