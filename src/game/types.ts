@@ -33,7 +33,10 @@ export interface GameState {
 
 export interface GameAction {
   id: string;
-  label: string;
+  
+  parentId?: string;
+  hidden?: boolean;
+label: string;
   icon: string;
   description: string;
   energyCost: number;
@@ -50,7 +53,9 @@ export interface GameAction {
 
 export interface LogEntry {
   id: number;
-  text: string;
+  text?: string;
+  key?: string;
+  params?: Record<string, any>;
   type: "narrative" | "action" | "event" | "milestone";
   day: number;
 }

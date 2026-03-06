@@ -59,7 +59,6 @@ export function LanguageProvider({
   };
 
   const T = useMemo(() => getText(lang), [lang]);
-
   const value = useMemo(() => ({ lang, setLang, T }), [lang, T]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

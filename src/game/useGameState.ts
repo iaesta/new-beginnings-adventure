@@ -19,7 +19,8 @@ function clamp(n: number, min: number, max: number) {
 }
 
 function addLog(state: GameState, entry: Omit<LogEntry, "id">): GameState {
-  const id = (state.log[state.log.length - 1]?.id ?? 0) + 1;
+  const lastId = Number(state.log[state.log.length - 1]?.id ?? 0);
+  const id = lastId + 1;
   return { ...state, log: [...state.log, { id, ...entry }] };
 }
 
@@ -157,8 +158,6 @@ function startNextDay(state: GameState): GameState {
     slotsRemaining: slotsPerDay,
     dailyEventTriggeredToday: false,
     actionEventTriggeredToday: false,
-    needsRecharge: false,
-    crashPenaltyApplied: 0,
   };
 
   let s = addLog(base, { text: "You went to sleep. A new day begins.", type: "narrative", day: base.day });
@@ -192,14 +191,17 @@ function applyMilestones(state: GameState): GameState {
 }
 
 function applyAction(state: GameState, action: GameAction): GameState {
-  if (state.needsRecharge) {
-    return addLog(state, { text: "You need to recharge before doing anything else.", type: "event", day: state.day });
-  }
+  if (state.energy <= 0) return startNextDay(state);
 
   const slotsPerDay = state.slotsPerDay ?? DEFAULT_SLOTS_PER_DAY;
   const slotCost = action.slotCost ?? 1;
 
-  if (slotCost > 0 && state.slotsRemaining < slotCost) {
+  const isSleepFlexible = action.id === "sleep_8h";
+  const effectiveSlotCost =
+    isSleepFlexible ? Math.min(slotCost, Math.max(0, state.slotsRemaining)) : slotCost;
+
+  if (effectiveSlotCost > 0 && !isSleepFlexible && state.slotsRemaining < slotCost) {
+
     return addLog(state, { text: "Not enough time left today for that.", type: "event", day: state.day });
   }
 
@@ -215,19 +217,30 @@ function applyAction(state: GameState, action: GameAction): GameState {
     return addLog(state, { text: "You don't have enough energy for that.", type: "event", day: state.day });
   }
 
-  const slotsRemaining = clamp(state.slotsRemaining - slotCost, 0, slotsPerDay);
+  const slotsRemaining = clamp(state.slotsRemaining - effectiveSlotCost, 0, slotsPerDay);
   const energyAfterCost = clamp(state.energy - action.energyCost, 0, 100);
 
   const eff = action.effects ?? {};
 
-  const moneyRaw = state.money + (eff.money ?? 0);
+  // Flexible sleep: if less than 8h remain, scale recovery proportionally
+  const scale = isSleepFlexible && slotCost > 0 ? effectiveSlotCost / slotCost : 1;
+  const scaledEff = {
+    ...eff,
+    energy: eff.energy != null ? Math.round(eff.energy * scale) : eff.energy,
+    happiness: eff.happiness != null ? Math.round(eff.happiness * scale) : eff.happiness,
+    skills: eff.skills != null ? Math.round(eff.skills * scale) : eff.skills,
+    reputation: eff.reputation != null ? Math.round(eff.reputation * scale) : eff.reputation,
+    money: eff.money != null ? Math.round(eff.money * scale) : eff.money,
+  };
+
+  const moneyRaw = state.money + (scaledEff.money ?? 0);
   const wentBroke = moneyRaw < 0;
   const money = wentBroke ? 0 : moneyRaw;
 
-  let happiness = clamp(state.happiness + (eff.happiness ?? 0), 0, 100);
-  const skills = clamp(state.skills + (eff.skills ?? 0), 0, 100);
-  const reputation = clamp(state.reputation + (eff.reputation ?? 0), 0, 100);
-  const energy = clamp(energyAfterCost + (eff.energy ?? 0), 0, 100);
+  let happiness = clamp(state.happiness + (scaledEff.happiness ?? 0), 0, 100);
+  const skills = clamp(state.skills + (scaledEff.skills ?? 0), 0, 100);
+  const reputation = clamp(state.reputation + (scaledEff.reputation ?? 0), 0, 100);
+  const energy = clamp(energyAfterCost + (scaledEff.energy ?? 0), 0, 100);
 
   const timeOfDay = timeOfDayFromSlots(slotsPerDay, slotsRemaining);
 
@@ -244,7 +257,7 @@ function applyAction(state: GameState, action: GameAction): GameState {
     slotsRemaining,
   };
 
-  next = addLog(next, { text: `${action.icon} ${action.label} (⏱️ ${slotCost}h)`, type: "action", day: next.day });
+  next = addLog(next, { text: `${action.icon} ${action.label} (⏱️ ${effectiveSlotCost}h)`, type: "action", day: next.day });
 
   if (wentBroke) {
     happiness = clamp(next.happiness - 8, 0, 100);
@@ -264,21 +277,7 @@ function applyAction(state: GameState, action: GameAction): GameState {
 
   if (isBigActionId(action.id)) next = tryTriggerEvent(next, "action", action.id);
 
-  if (next.energy <= 0) {
-    // Crash: apply penalty now and force a recharge before next day
-    const penalty = 8;
-    const happinessCrash = clamp(next.happiness - penalty, 0, 100);
-    const fatigueDebt = (next.fatigueDebt ?? 0) + 3;
-    let crashed: GameState = {
-      ...next,
-      happiness: happinessCrash,
-      needsRecharge: true,
-      crashPenaltyApplied: penalty,
-      fatigueDebt,
-    };
-    crashed = addLog(crashed, { text: "You crashed from exhaustion (-8 Happiness). Recharge to recover.", type: "event", day: crashed.day });
-    return crashed;
-  }
+  if (next.energy <= 0) return startNextDay(addLog(next, { text: "You're exhausted.", type: "event", day: next.day }));
   if (next.slotsRemaining <= 0) return startNextDay(addLog(next, { text: "No time left today.", type: "event", day: next.day }));
 
   return next;
@@ -287,11 +286,17 @@ function applyAction(state: GameState, action: GameAction): GameState {
 export const STARTING_STATE: GameState = {
   day: 1,
   timeOfDay: "morning",
+
   money: 200,
   energy: 100,
   happiness: 55,
   skills: 0,
   reputation: 0,
+
+  fatigueDebt: 0,
+  needsRecharge: false,
+  crashPenaltyApplied: 0,
+
   actionsToday: 0,
   maxActions: 999,
   milestones: [],
@@ -302,9 +307,6 @@ export const STARTING_STATE: GameState = {
   dailyEventTriggeredToday: false,
   actionEventTriggeredToday: false,
   eventLastDay: {},
-  fatigueDebt: 0,
-  needsRecharge: false,
-  crashPenaltyApplied: 0,
   log: [
     { id: 1, text: "A fresh start begins.", type: "narrative", day: 1 },
     { id: 2, text: `Day 1 · ${TIME_LABELS.morning}`, type: "narrative", day: 1 },
@@ -325,30 +327,13 @@ function _useGameState() {
     });
   }, [state.day, state.skills]);
 
-function rechargeAndNextDay(state: GameState): GameState {
-  let s = state;
-
-  // Refund crash penalty if it was applied
-  if (s.crashPenaltyApplied && s.crashPenaltyApplied > 0) {
-    s = { ...s, happiness: clamp(s.happiness + s.crashPenaltyApplied, 0, 100), crashPenaltyApplied: 0 };
-    s = addLog(s, { text: "Recharge cancelled your crash penalty.", type: "event", day: s.day });
-  }
-
-  // Reduce fatigue debt slowly (anti-abuse)
-  if ((s.fatigueDebt ?? 0) > 0) {
-    s = { ...s, fatigueDebt: Math.max(0, s.fatigueDebt - 1) };
-  }
-
-  return startNextDay(s);
-}
-
   const onAction = (id: string) => {
     const action = availableActions.find((a) => a.id === id);
     if (!action) return;
     setState((prev) => applyAction(prev, action));
   };
 
-  const onSkipDay = () => setState((prev) => rechargeAndNextDay(prev));
+  const onSkipDay = () => setState((prev) => startNextDay(prev));
 
   const onStart = () =>
     setState((prev) => {

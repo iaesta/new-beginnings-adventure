@@ -103,15 +103,6 @@ export const ACTIONS: GameAction[] = [
   },
 
   {
-    id: "rest",
-    label: "Rest",
-    icon: "🛋️",
-    description: "Take it easy. Recharge your batteries.",
-    energyCost: -30,
-    slotCost: 2,
-    effects: { energy: 30, happiness: 5 },
-  },
-  {
     id: "exercise",
     label: "Exercise",
     icon: "🏃",
@@ -166,6 +157,8 @@ export const ACTIONS: GameAction[] = [
   },
   {
     id: "nap_1h",
+    parentId: "rest",
+    hidden: true,
     label: "Nap (1h)",
     icon: "😴",
     description: "A quick nap to regain a bit of energy.",
@@ -175,6 +168,8 @@ export const ACTIONS: GameAction[] = [
   },
   {
     id: "rest_4h",
+    parentId: "rest",
+    hidden: true,
     label: "Rest (4h)",
     icon: "🛌",
     description: "A solid rest session.",
@@ -184,6 +179,8 @@ export const ACTIONS: GameAction[] = [
   },
   {
     id: "sleep_8h",
+    parentId: "rest",
+    hidden: true,
     label: "Sleep (8h)",
     icon: "🌙",
     description: "Deep sleep. Fully recover energy.",

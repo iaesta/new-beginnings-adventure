@@ -13,18 +13,16 @@ const EndingScreen = ({ state, onRestart }: EndingScreenProps) => {
     <div className="flex items-center justify-center min-h-screen p-6">
       <div className="max-w-md w-full text-center space-y-8 animate-fade-in">
         <h1 className="text-3xl font-serif text-primary text-glow-primary">
-          One Month Later
+          {T.ENDING.title}
         </h1>
 
-        <p className="text-sm text-secondary-foreground font-serif italic leading-relaxed">
-          You came here with nothing but a suitcase and a name on a contract.
-          Now you have a routine, a few friends, and a place that's starting to feel
-          like home. It's not perfect — but it's yours.
+        <p className="text-sm text-secondary-foreground font-serif italic leading-relaxed" style={{ whiteSpace: "pre-line" }}>
+          {T.ENDING.story}
         </p>
 
         <div className="space-y-2 text-left bg-card border border-border rounded-md p-4">
           <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">
-            Your Journey
+            {T.UI.yourJourney}
           </p>
           <div className="grid grid-cols-2 gap-2 text-sm">
             <span className="text-muted-foreground">Days:</span>
@@ -40,7 +38,7 @@ const EndingScreen = ({ state, onRestart }: EndingScreenProps) => {
 
         <div className="space-y-2 text-left">
           <p className="text-xs text-muted-foreground uppercase tracking-wider">
-            Milestones ({state.milestones.length}/{MILESTONES.length})
+            {T.UI.milestones} ({state.milestones.length}/{MILESTONES.length})
           </p>
           <div className="flex flex-wrap gap-2">
             {MILESTONES.map(m => (
@@ -62,7 +60,7 @@ const EndingScreen = ({ state, onRestart }: EndingScreenProps) => {
           onClick={onRestart}
           className="px-8 py-3 rounded-md border border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300 text-sm tracking-wider uppercase"
         >
-          Start Over
+          {T.ENDING.restart}
         </button>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import type { GameAction } from "@/game/types";
+import { useText } from "@/game/i18n";
 
 interface ActionButtonProps {
   action: GameAction;
@@ -9,13 +10,17 @@ interface ActionButtonProps {
 }
 
 const ActionButton = ({ action, disabled, lowEnergy, onClick, onHover }: ActionButtonProps) => {
+  const T = useText();
+  const tAction = (T as any).ACTIONS?.[action.id];
+  const label = tAction?.label ?? action.label;
+  const description = tAction?.description ?? action.description;
   const isDisabled = disabled || (lowEnergy && action.energyCost > 0);
 
   return (
     <button
       onClick={onClick}
       onMouseEnter={(e) =>
-      onHover(action.description, e.currentTarget.getBoundingClientRect())
+      onHover(description, e.currentTarget.getBoundingClientRect())
   }
       disabled={isDisabled}
       className={`group relative w-full text-left rounded-2xl border p-4
@@ -32,7 +37,7 @@ const ActionButton = ({ action, disabled, lowEnergy, onClick, onHover }: ActionB
 
   {/* Esto permite que el texto se recorte bonito sin romper el layout */}
   <span className="text-sm font-semibold text-foreground truncate flex-1 min-w-0">
-      {action.label}
+      {label}
   </span>
 
        {action.energyCost > 0 && (

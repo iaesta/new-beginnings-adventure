@@ -1,10 +1,11 @@
-import { useText } from "@/game/i18n";
+import { useI18n, useText } from "@/game/i18n";
 interface IntroScreenProps {
   jobTitle: string;
   onStart: () => void;
 }
 
 const IntroScreen = ({ jobTitle, onStart }: IntroScreenProps) => {
+  const { lang, setLang } = useI18n();
   const T = useText();
   return (
     <div className="flex items-center justify-center min-h-screen p-6">
@@ -19,12 +20,12 @@ const IntroScreen = ({ jobTitle, onStart }: IntroScreenProps) => {
         </div>
 
         <div className="space-y-4 text-sm text-secondary-foreground leading-relaxed font-serif italic">
-          <p>You quit your old life.</p>
-          <p>New city. New apartment. New job.</p>
+          <p>{T.INTRO.line1}</p>
+          <p>{T.INTRO.line2}</p>
           <p>
-            You start Monday as a <span className="text-primary">{jobTitle}</span>.
+            {T.INTRO.line3Prefix} <span className="text-primary">{jobTitle}</span>.
           </p>
-          <p>You have $20, a suitcase, and something to prove.</p>
+          <p>{T.INTRO.line4}</p>
         </div>
 
         <button
@@ -35,7 +36,7 @@ const IntroScreen = ({ jobTitle, onStart }: IntroScreenProps) => {
         </button>
 
         <p className="text-xs text-muted-foreground">
-          Manage your energy. Build your skills. Find your footing.
+          {T.INTRO.tip}
         </p>
       </div>
     </div>

@@ -18,9 +18,11 @@ type TooltipData = { text: string; x: number; y: number };
 const isStudyVariant = (id: string) => id === "study" || id.startsWith("study_");
 const isPracticeVariant = (id: string) => id === "practice" || id.startsWith("practice_");
 const isSocializeVariant = (id: string) => id === "socialize" || id.startsWith("socialize_");
+const isRestVariant = (id: string) =>
+  id.startsWith("nap_") || id.startsWith("rest_") || id.startsWith("sleep_");
 
 /** Menu buttons (not real actions) */
-const STUDY_MENU: GameAction = {
+const STUDY_MENU_BASE: GameAction = {
   id: "__menu_study__",
   icon: "📚",
   label: "Study",
@@ -29,7 +31,7 @@ const STUDY_MENU: GameAction = {
   effects: {},
 };
 
-const PRACTICE_MENU: GameAction = {
+const PRACTICE_MENU_BASE: GameAction = {
   id: "__menu_practice__",
   icon: "🧪",
   label: "Practice",
@@ -38,11 +40,20 @@ const PRACTICE_MENU: GameAction = {
   effects: {},
 };
 
-const SOCIAL_MENU: GameAction = {
+const SOCIAL_MENU_BASE: GameAction = {
   id: "__menu_social__",
   icon: "🗣️",
   label: "Socialize",
   description: "Pick an option (coffee, dinner, party…).",
+  energyCost: 0,
+  effects: {},
+};
+
+const REST_MENU_BASE: GameAction = {
+  id: "__menu_rest__",
+  icon: "🛋️",
+  label: "Rest",
+  description: "Pick an option.",
   energyCost: 0,
   effects: {},
 };
@@ -236,6 +247,30 @@ function repColor(rep: number) {
 const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreenProps) => {
   const { lang, setLang } = useI18n();
   const T = useText();
+
+  const STUDY_MENU = useMemo(() => ({
+    ...STUDY_MENU_BASE,
+    label: T.MODALS.studyTitle,
+    description: T.MODALS.studySubtitle,
+  }), [T]);
+
+  const PRACTICE_MENU = useMemo(() => ({
+    ...PRACTICE_MENU_BASE,
+    label: T.MODALS.practiceTitle,
+    description: T.MODALS.practiceSubtitle,
+  }), [T]);
+
+  const SOCIAL_MENU = useMemo(() => ({
+    ...SOCIAL_MENU_BASE,
+    label: T.MODALS.socialTitle,
+    description: T.MODALS.socialSubtitle,
+  }), [T]);
+
+  const REST_MENU = useMemo(() => ({
+    ...REST_MENU_BASE,
+    label: T.MODALS.restTitle,
+    description: T.MODALS.restSubtitle,
+  }), [T]);
   const DAYS_IN_MONTH = 30;
   const dayInMonth = ((state.day - 1) % DAYS_IN_MONTH) + 1;
   const monthNumber = Math.floor((state.day - 1) / DAYS_IN_MONTH) + 1;
@@ -244,6 +279,7 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
   const [studyOpen, setStudyOpen] = useState(false);
   const [practiceOpen, setPracticeOpen] = useState(false);
   const [socialOpen, setSocialOpen] = useState(false);
+  const [restOpen, setRestOpen] = useState(false);
 
   const canPractice = state.skills >= 20;
 
@@ -264,6 +300,18 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
     [availableActions]
   );
 
+  const restOptions = useMemo(() => {
+    const base = availableActions.filter((a: GameAction) => (a as any).parentId === "rest" || isRestVariant(a.id));
+    const sleepHours = Math.min(8, Math.max(0, state.slotsRemaining));
+    return base.map((a) => {
+      if (a.id !== "sleep_8h") return a;
+      return {
+        ...a,
+        label: `Sleep (${sleepHours}h)`,
+      } as GameAction;
+    });
+  }, [availableActions, state.slotsRemaining]);
+
   const socialOptions = useMemo(
     () => availableActions.filter((a: GameAction) => a.id.startsWith("socialize_") && a.id !== "socialize"),
     [availableActions]
@@ -277,6 +325,7 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
       if (isStudyVariant(a.id)) return false;
       if (isPracticeVariant(a.id)) return false;
       if (isSocializeVariant(a.id)) return false;
+      if (isRestVariant(a.id)) return false;
       return true;
     });
 
@@ -284,14 +333,16 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
     if (studyOptions.length > 0) withMenus.push(STUDY_MENU);
     if (canPractice && practiceOptions.length > 0) withMenus.push(PRACTICE_MENU);
     if (socialOptions.length > 0) withMenus.push(SOCIAL_MENU);
+    if (restOptions.length > 0) withMenus.push(REST_MENU);
 
     return [...withMenus, ...base];
-  }, [availableActions, canPractice, practiceOptions.length, socialOptions.length, studyOptions.length]);
+  }, [availableActions, canPractice, practiceOptions.length, socialOptions.length, restOptions.length, studyOptions.length, STUDY_MENU, PRACTICE_MENU, SOCIAL_MENU, REST_MENU]);
 
   const handleActionClick = (id: string) => {
     if (id === STUDY_MENU.id) return setStudyOpen(true);
     if (id === PRACTICE_MENU.id) return setPracticeOpen(true);
     if (id === SOCIAL_MENU.id) return setSocialOpen(true);
+    if (id === REST_MENU.id) return setRestOpen(true);
     onAction(id);
   };
 
@@ -315,12 +366,24 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
       <aside className="w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-border p-4 lg:p-6 space-y-6 bg-white/5 backdrop-blur">
         {/* Header */}
         <div className="space-y-1">
-          <h2 className="font-serif text-lg text-primary text-glow-primary">Fresh Start</h2>
+          <h2 className="font-serif text-lg text-primary text-glow-primary">{T.GAME.title}</h2>
           <p className="text-xs text-muted-foreground">
-            Day {dayInMonth}/{DAYS_IN_MONTH} · {TIME_LABELS[state.timeOfDay]}
+            {T.UI.day} {dayInMonth}/{DAYS_IN_MONTH} · {TIME_LABELS[state.timeOfDay]}
           </p>
           <p className="text-xs text-muted-foreground">{state.jobTitle}</p>
-          <p className="text-[11px] text-muted-foreground/70">Month {monthNumber}</p>
+          <p className="text-[11px] text-muted-foreground/70">{T.UI.month} {monthNumber}</p>
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-[11px] text-muted-foreground/70">{T.UI.language}:</span>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value as any)}
+              className="text-[11px] rounded-md border border-white/10 bg-black/30 px-2 py-1 text-white/80 hover:bg-black/40"
+            >
+              <option value="en">EN</option>
+              <option value="es">ES</option>
+              <option value="ja">JA</option>
+            </select>
+          </div>
         </div>
 
         {/* Time (clean) */}
@@ -328,10 +391,10 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
 
         {/* Stats */}
         <div className="space-y-3">
-          <StatBar label="Money" value={state.money} max={300} colorClass="bg-stat-money" icon="💰" />
-          <StatBar label="Energy" value={state.energy} max={100} colorClass="bg-stat-energy" icon="⚡" />
-          <StatBar label="Happiness" value={state.happiness} max={100} colorClass="bg-stat-happiness" icon="😊" />
-          <StatBar label="Skills" value={state.skills} max={100} colorClass="bg-stat-skills" icon="📈" />
+          <StatBar label={T.STATS.money} value={state.money} max={300} colorClass="bg-stat-money" icon="💰" />
+          <StatBar label={T.STATS.energy} value={state.energy} max={100} colorClass="bg-stat-energy" icon="⚡" />
+          <StatBar label={T.STATS.happiness} value={state.happiness} max={100} colorClass="bg-stat-happiness" icon="😊" />
+          <StatBar label={T.STATS.skills} value={state.skills} max={100} colorClass="bg-stat-skills" icon="📈" />
         </div>
 
         {/* Reputation */}
@@ -340,13 +403,13 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
             <div
               className="w-11 h-11 rounded-full border border-white/15 flex items-center justify-center text-sm font-extrabold text-black"
               style={medalStyle}
-              title="Reputation (0–100)"
+              title={T.STATS.reputationTitle}
             >
               {rep}
             </div>
 
             <div className="min-w-0">
-              <div className="text-xs text-muted-foreground">Reputation</div>
+              <div className="text-xs text-muted-foreground">{T.STATS.reputation}</div>
               <div className="h-2 w-40 max-w-full rounded-full bg-white/10 overflow-hidden mt-1">
                 <div
                   className="h-full"
@@ -363,7 +426,7 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
         {/* Achievements: show only when unlocked */}
         {unlockedAchievements.length > 0 && (
           <div className="space-y-2">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">Achievements</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">{T.UI.achievements}</p>
             <div className="flex flex-wrap gap-1">
               {unlockedAchievements.map((m: { id: string; label: string }) => (
                 <span key={m.id} className="text-xs px-2 py-1 rounded bg-white/10" title={m.label}>
@@ -375,7 +438,7 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
         )}
 
         <div className="text-xs text-muted-foreground">
-          Actions are limited by <span className="text-foreground">Energy</span>.
+          {T.UI.energyLimitPrefix} <span className="text-foreground">{T.UI.energy}</span>.
         </div>
       </aside>
 
@@ -389,14 +452,14 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
 
         <section className="border-t border-border p-4 lg:p-6 bg-white/5 backdrop-blur">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">Actions</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">{T.UI.actions}</p>
 
             <button
               onClick={onSkipDay}
               className={`text-xs px-4 py-2 rounded-xl border transition-all duration-200 ${state.energy <= 0 ? "border-red-500 bg-red-500/10 hover:bg-red-500/20" : "border-border bg-white/5 hover:bg-white/10"}`}
               type="button"
             >
-              Skip Day
+              {T.UI.endDay}
             </button>
           </div>
 
@@ -434,8 +497,8 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
       {/* Modals */}
       {studyOpen && (
         <SimpleModal
-          title="Study"
-          subtitle="Pick how long you want to study."
+          title={T.MODALS.studyTitle}
+          subtitle={T.MODALS.studySubtitle}
           options={studyOptions}
           onClose={() => setStudyOpen(false)}
           onPick={(id) => {
@@ -447,8 +510,8 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
 
       {practiceOpen && (
         <SimpleModal
-          title="Practice"
-          subtitle="+60% XP, but costs +60% energy & happiness."
+          title={T.MODALS.practiceTitle}
+          subtitle={T.MODALS.practiceSubtitle}
           options={practiceOptions}
           onClose={() => setPracticeOpen(false)}
           onPick={(id) => {
@@ -460,8 +523,8 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
 
       {socialOpen && (
         <SimpleModal
-          title="Socialize"
-          subtitle="Pick an option."
+          title={T.MODALS.socialTitle}
+          subtitle={T.MODALS.socialSubtitle}
           options={socialOptions}
           onClose={() => setSocialOpen(false)}
           onPick={(id) => {
@@ -470,6 +533,20 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
           }}
         />
       )}
+
+      {restOpen && (
+        <SimpleModal
+          title={T.MODALS.restTitle}
+          subtitle={T.MODALS.restSubtitle}
+          options={restOptions}
+          onClose={() => setRestOpen(false)}
+          onPick={(id) => {
+            onAction(id);
+            setRestOpen(false);
+          }}
+        />
+      )}
+
     </div>
   );
 };
