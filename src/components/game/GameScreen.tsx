@@ -1,3 +1,4 @@
+
 import { useMemo, useState } from "react";
 import type { GameAction, GameState } from "@/game/types";
 import { MILESTONES } from "@/game/data";
@@ -119,24 +120,42 @@ function TimeClock({
   const progress = clamp01(used / perDay);
   const degrees = Math.round(progress * 360);
   const color = progressColor(progress);
+  const sleepZoneStartDeg = Math.round(((perDay - 8) / perDay) * 360);
 
   return (
     <div className="flex items-center justify-center">
-      <div
-        className="rounded-full grid place-items-center"
-        style={{
-          width: 80,
-          height: 80,
-          background: `conic-gradient(${color} ${degrees}deg, rgba(255,255,255,0.15) 0deg)`,
-        }}
-        title={T.TIME[timeOfDay]}
-        aria-label={T.UI.timeAriaLabel}
-      >
+      <div className="relative" title={T.TIME[timeOfDay]} aria-label={T.UI.timeAriaLabel}>
         <div
-          className="rounded-full grid place-items-center bg-black/40 border border-white/10"
-          style={{ width: 60, height: 60 }}
+          className="absolute inset-0 rounded-full"
+          style={{
+            width: 86,
+            height: 86,
+            left: -3,
+            top: -3,
+            background: `conic-gradient(
+              rgba(99,102,241,0) 0deg,
+              rgba(99,102,241,0) ${sleepZoneStartDeg}deg,
+              rgba(99,102,241,0.35) ${sleepZoneStartDeg}deg,
+              rgba(99,102,241,0.35) 360deg
+            )`,
+            mask: "radial-gradient(circle, transparent 58%, black 59%)",
+            WebkitMask: "radial-gradient(circle, transparent 58%, black 59%)",
+          }}
+        />
+        <div
+          className="rounded-full grid place-items-center"
+          style={{
+            width: 80,
+            height: 80,
+            background: `conic-gradient(${color} ${degrees}deg, rgba(255,255,255,0.15) 0deg)`,
+          }}
         >
-          <div className="text-4xl leading-none">{timeOfDayIcon(timeOfDay)}</div>
+          <div
+            className="rounded-full grid place-items-center bg-black/40 border border-white/10"
+            style={{ width: 60, height: 60 }}
+          >
+            <div className="text-4xl leading-none">{timeOfDayIcon(timeOfDay)}</div>
+          </div>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
+
 import { useMemo, useState } from "react";
 import type { GameAction, GameEvent, GameState, LogEntry } from "@/game/types";
-import { ACTIONS, EVENTS, MILESTONES, ACTION_NARRATIVES, TIME_LABELS } from "@/game/data";
+import { ACTIONS, EVENTS, MILESTONES, ACTION_NARRATIVES } from "@/game/data";
 
 const DEFAULT_SLOTS_PER_DAY = 24;
 const PAY_DAYS = [15, 30];
@@ -46,6 +47,14 @@ function pickNarrativeParams(actionId: string): { group: string; index: number }
   return { group, index };
 }
 
+function calculateSleepStartEnergy(slotsRemaining: number): number {
+  const sleepHours = Math.min(8, Math.max(0, slotsRemaining));
+  const extraHours = Math.max(0, slotsRemaining - 8);
+  const baseEnergy = Math.round((sleepHours / 8) * 90);
+  const bonus = Math.min(extraHours * 5, 10);
+  return clamp(baseEnergy + bonus, 0, 100);
+}
+
 function applyMonthlySystem(state: GameState): GameState {
   let s = state;
 
@@ -67,11 +76,7 @@ function applyMonthlySystem(state: GameState): GameState {
         const happiness = clamp(s.happiness - 8, 0, 100);
         const reputation = clamp(s.reputation - 2, 0, 100);
         s = { ...s, happiness, reputation, money: 0 };
-        s = addLog(s, {
-          key: "log.money.wentBroke",
-          type: "event",
-          day: s.day,
-        });
+        s = addLog(s, { key: "log.money.wentBroke", type: "event", day: s.day });
       }
     }
   }
@@ -125,11 +130,7 @@ function applyEvent(state: GameState, ev: GameEvent): GameState {
     const happiness = clamp(next.happiness - 8, 0, 100);
     const reputation = clamp(next.reputation - 2, 0, 100);
     next = { ...next, happiness, reputation, money: 0 };
-    next = addLog(next, {
-      key: "log.money.wentBroke",
-      type: "event",
-      day: next.day,
-    });
+    next = addLog(next, { key: "log.money.wentBroke", type: "event", day: next.day });
   }
 
   return next;
@@ -159,7 +160,7 @@ function tryTriggerEvent(state: GameState, kind: "daily" | "action", actionId?: 
   return state;
 }
 
-function startNextDay(state: GameState): GameState {
+function startNextDay(state: GameState, startEnergy = 100): GameState {
   const slotsPerDay = state.slotsPerDay ?? DEFAULT_SLOTS_PER_DAY;
 
   const base: GameState = {
@@ -167,7 +168,7 @@ function startNextDay(state: GameState): GameState {
     day: state.day + 1,
     timeOfDay: "morning",
     actionsToday: 0,
-    energy: 100,
+    energy: clamp(startEnergy, 0, 100),
     slotsPerDay,
     slotsRemaining: slotsPerDay,
     dailyEventTriggeredToday: false,
@@ -245,13 +246,9 @@ function applyAction(state: GameState, action: GameAction): GameState {
   const skills = clamp(state.skills + (scaledEff.skills ?? 0), 0, 100);
   const reputation = clamp(state.reputation + (scaledEff.reputation ?? 0), 0, 100);
 
-  let energy: number;
-  if (isSleepFlexible) {
-    const recovered = Math.round(100 * scale);
-    energy = clamp(energyAfterCost + recovered, 0, 100);
-  } else {
-    energy = clamp(energyAfterCost + (eff.energy ?? 0), 0, 100);
-  }
+  const energy = isSleepFlexible
+    ? state.energy
+    : clamp(energyAfterCost + (eff.energy ?? 0), 0, 100);
 
   const timeOfDay = timeOfDayFromSlots(slotsPerDay, slotsRemaining);
 
@@ -279,11 +276,7 @@ function applyAction(state: GameState, action: GameAction): GameState {
     happiness = clamp(next.happiness - 8, 0, 100);
     const repPenalty = clamp(next.reputation - 2, 0, 100);
     next = { ...next, happiness, reputation: repPenalty, money: 0 };
-    next = addLog(next, {
-      key: "log.money.wentBroke",
-      type: "event",
-      day: next.day,
-    });
+    next = addLog(next, { key: "log.money.wentBroke", type: "event", day: next.day });
   }
 
   const narrative = pickNarrativeParams(action.id);
@@ -299,6 +292,11 @@ function applyAction(state: GameState, action: GameAction): GameState {
   next = applyMilestones(next);
 
   if (isBigActionId(action.id)) next = tryTriggerEvent(next, "action", action.id);
+
+  if (isSleepFlexible) {
+    const nextDayEnergy = calculateSleepStartEnergy(state.slotsRemaining);
+    return startNextDay(next, nextDayEnergy);
+  }
 
   if (next.energy <= 0) return startNextDay(addLog(next, { key: "log.system.exhausted", type: "event", day: next.day }));
   if (next.slotsRemaining <= 0) return startNextDay(addLog(next, { key: "log.system.noTimeLeft", type: "event", day: next.day }));
