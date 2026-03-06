@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { GameAction, GameState } from "@/game/types";
-import { TIME_LABELS, MILESTONES } from "@/game/data";
+import { MILESTONES } from "@/game/data";
 import { useI18n, useText } from "@/game/i18n";
 import StatBar from "./StatBar";
 import GameLog from "./GameLog";
@@ -18,11 +18,8 @@ type TooltipData = { text: string; x: number; y: number };
 const isStudyVariant = (id: string) => id === "study" || id.startsWith("study_");
 const isPracticeVariant = (id: string) => id === "practice" || id.startsWith("practice_");
 const isSocializeVariant = (id: string) => id === "socialize" || id.startsWith("socialize_");
-const isRestVariant = (id: string) =>
-  id.startsWith("nap_") || id.startsWith("rest_") || id.startsWith("sleep_");
 
-/** Menu buttons (not real actions) */
-const STUDY_MENU_BASE: GameAction = {
+const STUDY_MENU: GameAction = {
   id: "__menu_study__",
   icon: "📚",
   label: "Study",
@@ -31,7 +28,7 @@ const STUDY_MENU_BASE: GameAction = {
   effects: {},
 };
 
-const PRACTICE_MENU_BASE: GameAction = {
+const PRACTICE_MENU: GameAction = {
   id: "__menu_practice__",
   icon: "🧪",
   label: "Practice",
@@ -40,16 +37,16 @@ const PRACTICE_MENU_BASE: GameAction = {
   effects: {},
 };
 
-const SOCIAL_MENU_BASE: GameAction = {
+const SOCIAL_MENU: GameAction = {
   id: "__menu_social__",
   icon: "🗣️",
   label: "Socialize",
-  description: "Pick an option (coffee, dinner, party…).",
+  description: "Pick an option.",
   energyCost: 0,
   effects: {},
 };
 
-const REST_MENU_BASE: GameAction = {
+const REST_MENU: GameAction = {
   id: "__menu_rest__",
   icon: "🛋️",
   label: "Rest",
@@ -62,9 +59,6 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
-/* -------------------- TIME CLOCK (clean) --------------------
-   Only a round progress ring + big icon in the center
--------------------------------------------------------------*/
 type TimeOfDay = GameState["timeOfDay"];
 type Stop = { t: number; rgb: [number, number, number] };
 
@@ -77,10 +71,10 @@ function clamp01(n: number) {
 function progressColor(pUsed: number) {
   const t = clamp01(pUsed);
   const stops: Stop[] = [
-    { t: 0.0, rgb: [34, 197, 94] },   // green
-    { t: 0.6, rgb: [234, 179, 8] },   // yellow
-    { t: 0.8, rgb: [249, 115, 22] },  // orange
-    { t: 1.0, rgb: [239, 68, 68] },   // red
+    { t: 0.0, rgb: [34, 197, 94] },
+    { t: 0.6, rgb: [234, 179, 8] },
+    { t: 0.8, rgb: [249, 115, 22] },
+    { t: 1.0, rgb: [239, 68, 68] },
   ];
 
   let a: Stop = stops[0];
@@ -117,6 +111,7 @@ function TimeClock({
   slotsPerDay: number;
   timeOfDay: TimeOfDay;
 }) {
+  const T = useText();
   const perDay = Number.isFinite(slotsPerDay) && slotsPerDay > 0 ? slotsPerDay : 24;
   const remaining = Number.isFinite(slotsRemaining) ? clamp(slotsRemaining, 0, perDay) : perDay;
 
@@ -134,8 +129,8 @@ function TimeClock({
           height: 80,
           background: `conic-gradient(${color} ${degrees}deg, rgba(255,255,255,0.15) 0deg)`,
         }}
-        title={TIME_LABELS[timeOfDay]}
-        aria-label="Time"
+        title={T.TIME[timeOfDay]}
+        aria-label={T.UI.timeAriaLabel}
       >
         <div
           className="rounded-full grid place-items-center bg-black/40 border border-white/10"
@@ -148,7 +143,6 @@ function TimeClock({
   );
 }
 
-/* -------------------- MODAL -------------------- */
 function SimpleModal({
   title,
   subtitle,
@@ -162,6 +156,8 @@ function SimpleModal({
   onPick: (id: string) => void;
   onClose: () => void;
 }) {
+  const T = useText();
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-black/70 backdrop-blur p-4">
@@ -176,7 +172,7 @@ function SimpleModal({
             onClick={onClose}
             type="button"
           >
-            Close
+            {T.UI.close}
           </button>
         </div>
 
@@ -204,7 +200,6 @@ function SimpleModal({
   );
 }
 
-/* -------------------- REPUTATION MEDAL (unchanged) -------------------- */
 function hexToRgb(hex: string) {
   const h = hex.replace("#", "");
   const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
@@ -243,34 +238,9 @@ function repColor(rep: number) {
   return stops[stops.length - 1].c;
 }
 
-/* -------------------- SCREEN -------------------- */
 const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreenProps) => {
   const { lang, setLang } = useI18n();
   const T = useText();
-
-  const STUDY_MENU = useMemo(() => ({
-    ...STUDY_MENU_BASE,
-    label: T.MODALS.studyTitle,
-    description: T.MODALS.studySubtitle,
-  }), [T]);
-
-  const PRACTICE_MENU = useMemo(() => ({
-    ...PRACTICE_MENU_BASE,
-    label: T.MODALS.practiceTitle,
-    description: T.MODALS.practiceSubtitle,
-  }), [T]);
-
-  const SOCIAL_MENU = useMemo(() => ({
-    ...SOCIAL_MENU_BASE,
-    label: T.MODALS.socialTitle,
-    description: T.MODALS.socialSubtitle,
-  }), [T]);
-
-  const REST_MENU = useMemo(() => ({
-    ...REST_MENU_BASE,
-    label: T.MODALS.restTitle,
-    description: T.MODALS.restSubtitle,
-  }), [T]);
   const DAYS_IN_MONTH = 30;
   const dayInMonth = ((state.day - 1) % DAYS_IN_MONTH) + 1;
   const monthNumber = Math.floor((state.day - 1) / DAYS_IN_MONTH) + 1;
@@ -290,53 +260,65 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
     window.setTimeout(() => setTooltip(null), 3000);
   };
 
+  const tr = (a: GameAction): GameAction => {
+    const tAction = (T as any).ACTIONS?.[a.id];
+    return {
+      ...a,
+      label: tAction?.label ?? a.label,
+      description: tAction?.description ?? a.description,
+    };
+  };
+
   const studyOptions = useMemo(
-    () => availableActions.filter((a: GameAction) => a.id === "study_1h" || a.id === "study_2h" || a.id === "study_4h"),
-    [availableActions]
+    () => availableActions.filter((a: GameAction) => a.id === "study_1h" || a.id === "study_2h" || a.id === "study_4h").map(tr),
+    [availableActions, T]
   );
 
   const practiceOptions = useMemo(
-    () => availableActions.filter((a: GameAction) => a.id === "practice_1h" || a.id === "practice_2h" || a.id === "practice_4h"),
-    [availableActions]
+    () => availableActions.filter((a: GameAction) => a.id === "practice_1h" || a.id === "practice_2h" || a.id === "practice_4h").map(tr),
+    [availableActions, T]
+  );
+
+  const socialOptions = useMemo(
+    () => availableActions.filter((a: GameAction) => a.id.startsWith("socialize_") && a.id !== "socialize").map(tr),
+    [availableActions, T]
   );
 
   const restOptions = useMemo(() => {
-    const base = availableActions.filter((a: GameAction) => (a as any).parentId === "rest" || isRestVariant(a.id));
     const sleepHours = Math.min(8, Math.max(0, state.slotsRemaining));
-    return base.map((a) => {
-      if (a.id !== "sleep_8h") return a;
-      return {
-        ...a,
-        label: `Sleep (${sleepHours}h)`,
-      } as GameAction;
-    });
-  }, [availableActions, state.slotsRemaining]);
+    return availableActions
+      .filter((a: GameAction) => a.parentId === "rest")
+      .map((a) => {
+        const tAction = (T as any).ACTIONS?.[a.id];
+        if (a.id === "sleep_8h" && tAction?.labelWithHours) {
+          return { ...a, label: tAction.labelWithHours(sleepHours), description: tAction.description ?? a.description };
+        }
+        return {
+          ...a,
+          label: tAction?.label ?? a.label,
+          description: tAction?.description ?? a.description,
+        };
+      });
+  }, [availableActions, state.slotsRemaining, T]);
 
-  const socialOptions = useMemo(
-    () => availableActions.filter((a: GameAction) => a.id.startsWith("socialize_") && a.id !== "socialize"),
-    [availableActions]
-  );
-
-  // Build actions grid:
-  // - Hide study/practice/social variants (they live in modals)
-  // - Insert "menu" buttons (Study / Practice / Socialize)
   const actionsForGrid = useMemo(() => {
     const base = availableActions.filter((a: GameAction) => {
+      if (a.hidden || a.parentId) return false;
       if (isStudyVariant(a.id)) return false;
       if (isPracticeVariant(a.id)) return false;
       if (isSocializeVariant(a.id)) return false;
-      if (isRestVariant(a.id)) return false;
+      if (a.id === "rest") return false;
       return true;
     });
 
     const withMenus: GameAction[] = [];
-    if (studyOptions.length > 0) withMenus.push(STUDY_MENU);
-    if (canPractice && practiceOptions.length > 0) withMenus.push(PRACTICE_MENU);
-    if (socialOptions.length > 0) withMenus.push(SOCIAL_MENU);
-    if (restOptions.length > 0) withMenus.push(REST_MENU);
+    if (studyOptions.length > 0) withMenus.push({ ...STUDY_MENU, label: T.MODALS.studyTitle, description: T.MODALS.studySubtitle });
+    if (canPractice && practiceOptions.length > 0) withMenus.push({ ...PRACTICE_MENU, label: T.MODALS.practiceTitle, description: T.MODALS.practiceSubtitle });
+    if (socialOptions.length > 0) withMenus.push({ ...SOCIAL_MENU, label: T.MODALS.socialTitle, description: T.MODALS.socialSubtitle });
+    if (restOptions.length > 0) withMenus.push({ ...REST_MENU, label: T.MODALS.restTitle, description: T.MODALS.restSubtitle });
 
-    return [...withMenus, ...base];
-  }, [availableActions, canPractice, practiceOptions.length, socialOptions.length, restOptions.length, studyOptions.length, STUDY_MENU, PRACTICE_MENU, SOCIAL_MENU, REST_MENU]);
+    return [...withMenus, ...base.map(tr)];
+  }, [availableActions, canPractice, practiceOptions.length, socialOptions.length, restOptions.length, studyOptions.length, T]);
 
   const handleActionClick = (id: string) => {
     if (id === STUDY_MENU.id) return setStudyOpen(true);
@@ -346,7 +328,6 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
     onAction(id);
   };
 
-  // Achievements: hidden until unlocked (then show only unlocked)
   const unlockedAchievements = useMemo(() => {
     if (!state.milestones?.length) return [];
     return MILESTONES.filter((m: { id: string; label: string }) => state.milestones.includes(m.id));
@@ -362,13 +343,11 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
 
   return (
     <div className="min-h-screen lg:h-screen flex flex-col lg:flex-row">
-      {/* LEFT — Sidebar */}
       <aside className="w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-border p-4 lg:p-6 space-y-6 bg-white/5 backdrop-blur">
-        {/* Header */}
         <div className="space-y-1">
           <h2 className="font-serif text-lg text-primary text-glow-primary">{T.GAME.title}</h2>
           <p className="text-xs text-muted-foreground">
-            {T.UI.day} {dayInMonth}/{DAYS_IN_MONTH} · {TIME_LABELS[state.timeOfDay]}
+            {T.UI.day} {dayInMonth}/{DAYS_IN_MONTH} · {T.TIME[state.timeOfDay]}
           </p>
           <p className="text-xs text-muted-foreground">{state.jobTitle}</p>
           <p className="text-[11px] text-muted-foreground/70">{T.UI.month} {monthNumber}</p>
@@ -386,10 +365,8 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
           </div>
         </div>
 
-        {/* Time (clean) */}
         <TimeClock slotsRemaining={state.slotsRemaining} slotsPerDay={state.slotsPerDay} timeOfDay={state.timeOfDay} />
 
-        {/* Stats */}
         <div className="space-y-3">
           <StatBar label={T.STATS.money} value={state.money} max={300} colorClass="bg-stat-money" icon="💰" />
           <StatBar label={T.STATS.energy} value={state.energy} max={100} colorClass="bg-stat-energy" icon="⚡" />
@@ -397,7 +374,6 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
           <StatBar label={T.STATS.skills} value={state.skills} max={100} colorClass="bg-stat-skills" icon="📈" />
         </div>
 
-        {/* Reputation */}
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <div
@@ -423,14 +399,13 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
           </div>
         </div>
 
-        {/* Achievements: show only when unlocked */}
         {unlockedAchievements.length > 0 && (
           <div className="space-y-2">
             <p className="text-xs text-muted-foreground uppercase tracking-wider">{T.UI.achievements}</p>
             <div className="flex flex-wrap gap-1">
               {unlockedAchievements.map((m: { id: string; label: string }) => (
-                <span key={m.id} className="text-xs px-2 py-1 rounded bg-white/10" title={m.label}>
-                  {m.label}
+                <span key={m.id} className="text-xs px-2 py-1 rounded bg-white/10" title={(T as any).MILESTONES?.[m.id] ?? m.label}>
+                  {(T as any).MILESTONES?.[m.id] ?? m.label}
                 </span>
               ))}
             </div>
@@ -442,7 +417,6 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
         </div>
       </aside>
 
-      {/* RIGHT — Log + Actions */}
       <div className="flex-1 min-h-0 lg:h-screen flex flex-col">
         <main className="flex-1 min-h-0 p-4 lg:p-6">
           <div className="h-full rounded-2xl border border-white/10 bg-white/5 backdrop-blur overflow-hidden">
@@ -478,7 +452,6 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
         </section>
       </div>
 
-      {/* Tooltip bubble */}
       {tooltip && (
         <div
           className="fixed z-50 pointer-events-none"
@@ -494,7 +467,6 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
         </div>
       )}
 
-      {/* Modals */}
       {studyOpen && (
         <SimpleModal
           title={T.MODALS.studyTitle}
@@ -546,7 +518,6 @@ const GameScreen = ({ state, availableActions, onAction, onSkipDay }: GameScreen
           }}
         />
       )}
-
     </div>
   );
 };

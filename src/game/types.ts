@@ -16,33 +16,27 @@ export interface GameState {
   jobTitle: string;
   phase: "intro" | "playing" | "ending";
 
-  // Time slots (hours)
-  slotsPerDay: number; // e.g. 24
-  slotsRemaining: number; // 0..slotsPerDay
+  slotsPerDay: number;
+  slotsRemaining: number;
 
-  // Events (limits + cooldown)
-  dailyEventTriggeredToday: boolean; // max 1/day
-  actionEventTriggeredToday: boolean; // max 1/day
-  eventLastDay: Record<string, number>; // eventId -> last day triggered
+  dailyEventTriggeredToday: boolean;
+  actionEventTriggeredToday: boolean;
+  eventLastDay: Record<string, number>;
 
-  // Fatigue system (anti-abuse for crashing to 0 energy)
-  fatigueDebt: number; // stacks; crash adds +3, recharge clears -1 per day
-  needsRecharge: boolean; // when true, actions are blocked until you recharge
-  crashPenaltyApplied: number; // happiness penalty applied on crash (refunded on recharge)
+  fatigueDebt: number;
+  needsRecharge: boolean;
+  crashPenaltyApplied: number;
 }
 
 export interface GameAction {
   id: string;
-  
-  parentId?: string;
-  hidden?: boolean;
-label: string;
+  label: string;
   icon: string;
   description: string;
   energyCost: number;
-
-  // how many hours (slots) this action consumes
   slotCost?: number;
+  parentId?: string;
+  hidden?: boolean;
 
   effects: Partial<Pick<GameState, "money" | "energy" | "happiness" | "skills" | "reputation">>;
   minSkills?: number;
@@ -64,21 +58,12 @@ export type EventKind = "daily" | "action";
 
 export interface GameEvent {
   id: string;
-
-  // daily = evaluated at start of the day
-  // action = evaluated after a big action
   kind: EventKind;
-
   text: string;
-  chance: number; // 0..1
-
+  chance: number;
   minDay: number;
   maxDay?: number;
-
   condition?: (state: GameState) => boolean;
-
-  // only for kind="action"
   trigger?: (actionId: string, state: GameState) => boolean;
-
   effects: Partial<Pick<GameState, "money" | "energy" | "happiness" | "skills" | "reputation">>;
 }

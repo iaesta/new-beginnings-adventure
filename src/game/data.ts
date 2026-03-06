@@ -1,15 +1,5 @@
 import type { GameAction, GameEvent, GameState } from "./types";
 
-/**
- * Fresh Start - data.ts
- *
- * Kept rules:
- * - Work does NOT give money directly (salary is paid on Day 15/30 in useGameState).
- * - Base salary = 200 (useGameState).
- * - Slots (slotCost) control timeOfDay (useGameState).
- * - Achievements only visible when unlocked (GameScreen).
- */
-
 export const ACTIONS: GameAction[] = [
   {
     id: "work",
@@ -21,8 +11,6 @@ export const ACTIONS: GameAction[] = [
     effects: { skills: 2, reputation: 3, happiness: -5 },
   },
 
-  // This base 'study' can exist, but the UI uses the modal options below.
-  // You can keep it or remove it later if you want ONLY the modal.
   {
     id: "study",
     label: "Study",
@@ -32,8 +20,6 @@ export const ACTIONS: GameAction[] = [
     slotCost: 0,
     effects: {},
   },
-
-  // Study options (used by the Study modal)
   {
     id: "study_1h",
     label: "Study (1h)",
@@ -62,7 +48,6 @@ export const ACTIONS: GameAction[] = [
     effects: { skills: 8, happiness: -4 },
   },
 
-  // This base 'socialize' can exist, but the UI uses the modal options below.
   {
     id: "socialize",
     label: "Socialize",
@@ -72,8 +57,6 @@ export const ACTIONS: GameAction[] = [
     slotCost: 0,
     effects: {},
   },
-
-  // Socialize options (used by the Socialize modal)
   {
     id: "socialize_coffee",
     label: "Coffee",
@@ -144,8 +127,6 @@ export const ACTIONS: GameAction[] = [
     minDay: 2,
   },
 
-
-  // Rest menu + options
   {
     id: "rest",
     label: "Rest",
@@ -183,7 +164,7 @@ export const ACTIONS: GameAction[] = [
     hidden: true,
     label: "Sleep (8h)",
     icon: "🌙",
-    description: "Deep sleep. Fully recover energy.",
+    description: "Deep sleep. Recover energy based on hours slept.",
     energyCost: 0,
     slotCost: 8,
     effects: { energy: 100, happiness: 6 },
@@ -344,4 +325,7 @@ export const ACTION_NARRATIVES: Record<string, string[]> = {
   socialize_coffee: SOCIAL_NARRATIVES,
   socialize_dinner: SOCIAL_NARRATIVES,
   socialize_party: SOCIAL_NARRATIVES,
+  nap_1h: ["A short nap helps you reset a little."],
+  rest_4h: ["You slow down and let your mind breathe for a while."],
+  sleep_8h: ["You sink into a deeper sleep and let the day go."],
 };
