@@ -1,32 +1,24 @@
 export interface GameState {
-  fatigueStacks: number;
   day: number;
   timeOfDay: "morning" | "afternoon" | "evening" | "night";
-
   money: number;
   energy: number;
   happiness: number;
   skills: number;
   reputation: number;
-
   actionsToday: number;
   maxActions: number;
-
   log: LogEntry[];
   milestones: string[];
   jobTitle: string;
   phase: "intro" | "playing" | "ending";
-
   slotsPerDay: number;
   slotsRemaining: number;
-
   dailyEventTriggeredToday: boolean;
   actionEventTriggeredToday: boolean;
   eventLastDay: Record<string, number>;
-
-  fatigueDebt: number;
-  needsRecharge: boolean;
-  crashPenaltyApplied: number;
+  fatigueStacks: number;
+  goodSleepStreak: number;
 }
 
 export interface GameAction {
@@ -38,8 +30,9 @@ export interface GameAction {
   slotCost?: number;
   parentId?: string;
   hidden?: boolean;
-
-  effects: Partial<Pick<GameState, "money" | "energy" | "happiness" | "skills" | "reputation">>;
+  effects: Partial<
+    Pick<GameState, "money" | "energy" | "happiness" | "skills" | "reputation">
+  >;
   minSkills?: number;
   lockedText?: string;
   showWhenLocked?: boolean;
@@ -66,5 +59,7 @@ export interface GameEvent {
   maxDay?: number;
   condition?: (state: GameState) => boolean;
   trigger?: (actionId: string, state: GameState) => boolean;
-  effects: Partial<Pick<GameState, "money" | "energy" | "happiness" | "skills" | "reputation">>;
+  effects: Partial<
+    Pick<GameState, "money" | "energy" | "happiness" | "skills" | "reputation">
+  >;
 }
