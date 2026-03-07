@@ -1,4 +1,5 @@
 export interface GameState {
+  fatigueStacks: number;
   day: number;
   timeOfDay: "morning" | "afternoon" | "evening" | "night";
 
