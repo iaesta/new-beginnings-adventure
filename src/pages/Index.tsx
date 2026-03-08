@@ -1,7 +1,7 @@
 import GameScreen from "@/components/game/GameScreen";
 import IntroScreen from "@/components/game/IntroScreen";
 import EndingScreen from "@/components/game/EndingScreen";
-import useGameState from "@/game/useGameState";
+import { useGameState } from "@/game/useGameState";
 
 export default function Index() {
   const { state, availableActions, onAction, onSkipDay, onStart, onRestart } = useGameState();

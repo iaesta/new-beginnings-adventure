@@ -3,8 +3,9 @@ import type { GameAction, GameEvent, GameState, LogEntry } from "@/game/types";
 import { ACTIONS, EVENTS, MILESTONES, ACTION_NARRATIVES } from "@/game/data";
 
 const DEFAULT_SLOTS_PER_DAY = 24;
-const PAY_DAYS = [15, 30];
-const paycheckAmount = 200;
+const PAYCHECK_BASE = 200;
+const REQUIRED_WORK_DAYS = 11;
+const PERIOD_LENGTH = 15;
 
 const BILLS = [
   { id: "utilities", day: 10, label: "Utilities", amount: 30 },
@@ -14,6 +15,15 @@ const BILLS = [
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
+}
+
+function calculateSalary(workedDays: number) {
+  if (workedDays <= 0) return 0;
+  if (workedDays <= REQUIRED_WORK_DAYS) {
+    return Math.round(PAYCHECK_BASE * (workedDays / REQUIRED_WORK_DAYS));
+  }
+  const extraDays = workedDays - REQUIRED_WORK_DAYS;
+  return Math.round(PAYCHECK_BASE * (1 + extraDays * 0.05));
 }
 
 function addLog(state: GameState, entry: Omit<LogEntry, "id">): GameState {
@@ -49,6 +59,7 @@ function calculateSleepStartEnergy(slotsRemaining: number, energyDebt: number): 
 function normalizeNarrativeGroup(actionId: string): string {
   if (actionId.startsWith("study_") || actionId === "study") return "study";
   if (actionId.startsWith("socialize_") || actionId === "socialize") return "socialize";
+  if (actionId.startsWith("practice_") || actionId === "practice") return "practice";
   if (actionId === "nap_1h" || actionId === "rest_4h" || actionId === "sleep_8h" || actionId === "rest") return "rest";
   return actionId;
 }
@@ -64,9 +75,14 @@ function pickNarrativeParams(actionId: string): { group: string; index: number }
 function applyMonthlySystem(state: GameState): GameState {
   let s = state;
 
-  if (PAY_DAYS.includes(s.day)) {
-    s = { ...s, money: s.money + paycheckAmount };
-    s = addLog(s, { key: "log.money.payday", params: { amount: paycheckAmount }, type: "event", day: s.day });
+  if (s.day > 1 && (s.day - 1) % PERIOD_LENGTH === 0) {
+    const salary = calculateSalary(s.workedDaysThisPeriod);
+    s = { ...s, money: s.money + salary, workedDaysThisPeriod: 0 };
+    s = addLog(s, {
+      text: `Salary paid: $${salary} (${s.workedDaysThisPeriod}/${REQUIRED_WORK_DAYS} work days target).`,
+      type: "event",
+      day: s.day,
+    });
   }
 
   for (const bill of BILLS) {
@@ -76,7 +92,12 @@ function applyMonthlySystem(state: GameState): GameState {
       const money = wentBroke ? 0 : moneyRaw;
 
       s = { ...s, money };
-      s = addLog(s, { key: "log.money.billDue", params: { label: bill.label, amount: bill.amount }, type: "event", day: s.day });
+      s = addLog(s, {
+        key: "log.money.billDue",
+        params: { label: bill.label, amount: bill.amount },
+        type: "event",
+        day: s.day,
+      });
 
       if (wentBroke) {
         const happiness = clamp(s.happiness - 8, 0, 100);
@@ -180,6 +201,7 @@ function startNextDay(state: GameState, startEnergy = 100): GameState {
     dailyEventTriggeredToday: false,
     actionEventTriggeredToday: false,
     energyDebt: 0,
+    workedToday: false,
   };
 
   let s = addLog(base, { key: "log.system.sleepNewDay", type: "narrative", day: base.day });
@@ -196,7 +218,12 @@ function applyMilestones(state: GameState): GameState {
     const already = s.milestones.includes(m.id);
     if (!already && m.condition(s)) {
       s = { ...s, milestones: [...s.milestones, m.id] };
-      s = addLog(s, { key: "log.achievement.unlocked", params: { id: m.id, label: m.label }, type: "milestone", day: s.day });
+      s = addLog(s, {
+        key: "log.achievement.unlocked",
+        params: { id: m.id, label: m.label },
+        type: "milestone",
+        day: s.day,
+      });
     }
   }
   return s;
@@ -204,6 +231,7 @@ function applyMilestones(state: GameState): GameState {
 
 function applyAction(state: GameState, action: GameAction): GameState {
   if (state.energy <= 0) return startNextDay(state, 40);
+  if (action.id === "work" && state.workedToday) return state;
 
   const slotsPerDay = state.slotsPerDay ?? DEFAULT_SLOTS_PER_DAY;
   const slotCost = action.slotCost ?? 1;
@@ -254,6 +282,9 @@ function applyAction(state: GameState, action: GameAction): GameState {
   const energy = isSleepFlexible ? state.energy : clamp(energyAfterCost + (scaledEff.energy ?? 0), 0, 100);
 
   const timeOfDay = timeOfDayFromSlots(slotsPerDay, slotsRemaining);
+  const workedToday = state.workedToday || action.id === "work";
+  const workedDaysThisPeriod =
+    state.workedDaysThisPeriod + (action.id === "work" && !state.workedToday ? 1 : 0);
 
   let next: GameState = {
     ...state,
@@ -267,6 +298,8 @@ function applyAction(state: GameState, action: GameAction): GameState {
     slotsPerDay,
     slotsRemaining,
     energyDebt: state.energyDebt + energyDebtAdded,
+    workedToday,
+    workedDaysThisPeriod,
   };
 
   next = addLog(next, {
@@ -285,7 +318,12 @@ function applyAction(state: GameState, action: GameAction): GameState {
 
   const narrative = pickNarrativeParams(action.id);
   if (narrative) {
-    next = addLog(next, { key: "log.narrative", params: narrative, type: "narrative", day: next.day });
+    next = addLog(next, {
+      key: "log.narrative",
+      params: narrative,
+      type: "narrative",
+      day: next.day,
+    });
   }
 
   if (energyDebtAdded > 0) {
@@ -305,20 +343,42 @@ function applyAction(state: GameState, action: GameAction): GameState {
     let fatigueStacks = state.fatigueStacks;
     if (goodSleepStreak >= 2 && fatigueStacks > 0) fatigueStacks -= 1;
 
-    const afterSleep: GameState = { ...next, goodSleepStreak: goodSleepStreak >= 2 ? 0 : goodSleepStreak, fatigueStacks };
+    const afterSleep: GameState = {
+      ...next,
+      goodSleepStreak: goodSleepStreak >= 2 ? 0 : goodSleepStreak,
+      fatigueStacks,
+    };
+
     const nextDayEnergy = calculateSleepStartEnergy(state.slotsRemaining, afterSleep.energyDebt);
     return startNextDay(afterSleep, nextDayEnergy);
   }
 
   if (next.energy <= 0) {
     if (state.fatigueStacks >= 3) {
-      const gameOverState: GameState = { ...next, happiness: clamp(next.happiness - 10, 0, 100), phase: "ending" };
-      return addLog(gameOverState, { key: "log.system.gameOverBurnout", type: "event", day: gameOverState.day });
+      const gameOverState: GameState = {
+        ...next,
+        happiness: clamp(next.happiness - 10, 0, 100),
+        phase: "ending",
+      };
+      return addLog(gameOverState, {
+        key: "log.system.gameOverBurnout",
+        type: "event",
+        day: gameOverState.day,
+      });
     }
 
     const fatigueStacks = clamp(state.fatigueStacks + 1, 0, 3);
-    const crashed: GameState = { ...next, happiness: clamp(next.happiness - 10, 0, 100), fatigueStacks, goodSleepStreak: 0 };
-    const logged = addLog(crashed, { key: "log.system.burnoutCrash", type: "event", day: crashed.day });
+    const crashed: GameState = {
+      ...next,
+      happiness: clamp(next.happiness - 10, 0, 100),
+      fatigueStacks,
+      goodSleepStreak: 0,
+    };
+    const logged = addLog(crashed, {
+      key: "log.system.burnoutCrash",
+      type: "event",
+      day: crashed.day,
+    });
     return startNextDay(logged, 40);
   }
 
@@ -340,6 +400,8 @@ export const STARTING_STATE: GameState = {
   fatigueStacks: 0,
   goodSleepStreak: 0,
   energyDebt: 0,
+  workedToday: false,
+  workedDaysThisPeriod: 0,
   actionsToday: 0,
   maxActions: 999,
   milestones: [],
@@ -353,7 +415,6 @@ export const STARTING_STATE: GameState = {
   log: [
     { id: 1, key: "log.system.freshStart", type: "narrative", day: 1 },
     { id: 2, key: "log.system.newDay", params: { day: 1, timeOfDay: "morning" }, type: "narrative", day: 1 },
-    { id: 3, key: "log.system.salaryRules", type: "event", day: 1 },
   ],
 };
 
@@ -376,7 +437,13 @@ function _useGameState() {
   };
 
   const onSkipDay = () => setState((prev) => startNextDay(prev));
-  const onStart = () => setState((prev) => tryTriggerEvent(applyMonthlySystem({ ...prev, phase: "playing" }), "daily"));
+
+  const onStart = () =>
+    setState((prev) => {
+      const started = applyMonthlySystem({ ...prev, phase: "playing" });
+      return tryTriggerEvent(started, "daily");
+    });
+
   const onRestart = () => setState(STARTING_STATE);
 
   return { state, availableActions, onAction, onSkipDay, onStart, onRestart };

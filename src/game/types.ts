@@ -26,6 +26,9 @@ export interface GameState {
   fatigueStacks: number;
   goodSleepStreak: number;
   energyDebt: number;
+
+  workedToday: boolean;
+  workedDaysThisPeriod: number;
 }
 
 export interface GameAction {
